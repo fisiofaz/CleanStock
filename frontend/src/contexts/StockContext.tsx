@@ -34,6 +34,17 @@ export type Movement = {
   reason: string;
 };
 
+export type Supplier = {
+  id: number;
+  name: string;
+  document: string;
+  contactName: string;
+  phone: string;
+  email: string;
+  address: string;
+  active: boolean;
+};
+
 const initialProducts: Product[] = [
   {
     id: 1,
@@ -91,9 +102,16 @@ const initialProducts: Product[] = [
   },
 ];
 
+const initialSuppliers: Supplier[] = [];
+
 type StockContextType = {
   products: Product[];
   setProducts: Dispatch<SetStateAction<Product[]>>;
+  suppliers: Supplier[];
+  setSuppliers: Dispatch<SetStateAction<Supplier[]>>;
+  createSupplier: (supplier: Omit<Supplier, "id">) => void;
+  updateSupplier: (id: number, data: Omit<Supplier, "id">) => void;
+  toggleSupplierStatus: (id: number) => void;
   movements: Movement[];
   setMovements: Dispatch<SetStateAction<Movement[]>>;
   registerMovement: (data: {
@@ -111,6 +129,7 @@ const StockContext = createContext<StockContextType | undefined>(undefined);
 export function StockProvider({ children }: { children: ReactNode }) {
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [movements, setMovements] = useState<Movement[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>(initialSuppliers);  
 
   function createProduct(productData: Omit<Product, "id">) {
     const newProduct: Product = {
@@ -224,6 +243,33 @@ export function StockProvider({ children }: { children: ReactNode }) {
     return null;
   }
 
+  function createSupplier(supplierData: Omit<Supplier, "id">) {
+    const newSupplier: Supplier = {
+      ...supplierData,
+      id: Date.now(),
+    };
+
+    setSuppliers((currentSuppliers) => [...currentSuppliers, newSupplier]);
+  }
+
+  function updateSupplier(id: number, supplierData: Omit<Supplier, "id">) {
+    setSuppliers((currentSuppliers) =>
+      currentSuppliers.map((supplier) =>
+        supplier.id === id ? { ...supplier, ...supplierData } : supplier,
+      ),
+    );
+  }
+
+  function toggleSupplierStatus(id: number) {
+    setSuppliers((currentSuppliers) =>
+      currentSuppliers.map((supplier) =>
+        supplier.id === id
+          ? { ...supplier, active: !supplier.active }
+          : supplier,
+      ),
+    );
+  }
+
   return (
     <StockContext.Provider
       value={{
@@ -231,8 +277,13 @@ export function StockProvider({ children }: { children: ReactNode }) {
         setProducts,
         movements,
         setMovements,
+        suppliers,
+        setSuppliers,
         registerMovement,
         createProduct,
+        createSupplier,
+        updateSupplier,
+        toggleSupplierStatus,
       }}
     >
       {children}

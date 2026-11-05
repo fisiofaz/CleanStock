@@ -6,6 +6,7 @@ import { StockProvider } from "@/contexts/StockContext";
 import DashboardPage from "@/pages/DashboardPage";
 import ProductsPage from "@/pages/ProductsPage";
 import MovementsPage from "@/pages/MovementsPage";
+import SuppliersPage from "@/pages/SuppliersPage";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
             <Route element={<AppLayout />}>
               <Route path="/" element={<DashboardPage />} />
               <Route path="/products" element={<ProductsPage />} />
+              <Route path="/suppliers" element={<SuppliersPage />} />
               <Route path="/movements" element={<MovementsPage />} />
             </Route>
           </Routes>
