@@ -2,20 +2,25 @@ import { BrowserRouter, Routes, Route } from "react-router";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import AppLayout from "@/components/layout/AppLayout";
+import { StockProvider } from "@/contexts/StockContext";
 import DashboardPage from "@/pages/DashboardPage";
 import ProductsPage from "@/pages/ProductsPage";
+import MovementsPage from "@/pages/MovementsPage";
 
 function App() {
   return (
     <TooltipProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route element={<AppLayout />}>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/products" element={<ProductsPage />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+      <StockProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route element={<AppLayout />}>
+              <Route path="/" element={<DashboardPage />} />
+              <Route path="/products" element={<ProductsPage />} />
+              <Route path="/movements" element={<MovementsPage />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </StockProvider>
     </TooltipProvider>
   );
 }

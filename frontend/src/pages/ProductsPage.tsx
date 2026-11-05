@@ -1,5 +1,5 @@
 import { useState } from "react";
-
+import { useStock, type Product } from "@/contexts/StockContext";
 import {
   Package,
   CheckCircle2,
@@ -31,75 +31,6 @@ import {
 
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-
-type Product = {
-  id: number;
-  name: string;
-  category: string;
-  quantity: number;
-  unit: string;
-  unitPrice: number;
-  minimumStock: number;
-  active: boolean;
-  description?: string;
-};
-
-const initialProducts: Product[] = [
-  {
-    id: 1,
-    name: "Detergente neutro",
-    category: "Produtos de limpeza",
-    quantity: 35,
-    unit: "Litros",
-    unitPrice: 4.5,
-    minimumStock: 10,
-    active: true,
-    description: "Detergente neutro para limpeza geral",
-  },
-  {
-    id: 2,
-    name: "Água sanitária",
-    category: "Produtos de limpeza",
-    quantity: 4,
-    unit: "Litros",
-    unitPrice: 6.9,
-    minimumStock: 10,
-    active: true,
-  },
-  {
-    id: 3,
-    name: "Desinfetante",
-    category: "Produtos de limpeza",
-    quantity: 22,
-    unit: "Litros",
-    unitPrice: 8.5,
-    minimumStock: 8,
-    active: true,
-    description: "Desinfetante para superfícies",
-  },
-  {
-    id: 4,
-    name: "Papel toalha",
-    category: "Descartáveis",
-    quantity: 0,
-    unit: "Pacotes",
-    unitPrice: 12.9,
-    minimumStock: 5,
-    active: true,
-    description: "Papel toalha para uso doméstico",
-  },
-  {
-    id: 5,
-    name: "Sabão em pó",
-    category: "Produtos de limpeza",
-    quantity: 18,
-    unit: "Kg",
-    unitPrice: 11.5,
-    minimumStock: 8,
-    active: true,
-    description: "Sabão em pó para lavagem",
-  },
-];
 
 type ProductFormData = {
   name: string;
@@ -164,7 +95,8 @@ function ProductsPage() {
     const [selectedStatus, setSelectedStatus] = useState("all");
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     
-    const [products, setProducts] = useState<Product[]>(initialProducts);
+    const { products, setProducts, createProduct } = useStock();
+    
     const indicators = [
       {
         title: "Total de produtos",
@@ -324,8 +256,7 @@ function ProductsPage() {
           ),
         );
       } else {
-        const newProduct: Product = {
-          id: Date.now(),
+        createProduct({
           name: formData.name.trim(),
           category: categoryLabels[formData.category] ?? formData.category,
           quantity: initialStock,
@@ -334,9 +265,7 @@ function ProductsPage() {
           minimumStock,
           description: formData.description.trim(),
           active: true,
-        };
-
-        setProducts((currentProducts) => [...currentProducts, newProduct]);
+        });
       }
 
       setFormData({
