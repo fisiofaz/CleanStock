@@ -5,6 +5,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import { StockProvider } from "@/contexts/StockContext";
 import DashboardPage from "@/pages/DashboardPage";
 import ProductsPage from "@/pages/ProductsPage";
+import CategoriesPage from "@/pages/CategoriesPage";
 import MovementsPage from "@/pages/MovementsPage";
 import SuppliersPage from "@/pages/SuppliersPage";
 import PurchasesPage from "@/pages/PurchasesPage";
@@ -18,6 +19,7 @@ function App() {
             <Route element={<AppLayout />}>
               <Route path="/" element={<DashboardPage />} />
               <Route path="/products" element={<ProductsPage />} />
+              <Route path="/categories" element={<CategoriesPage />} />
               <Route path="/suppliers" element={<SuppliersPage />} />
               <Route path="/purchases" element={<PurchasesPage />} />
               <Route path="/movements" element={<MovementsPage />} />

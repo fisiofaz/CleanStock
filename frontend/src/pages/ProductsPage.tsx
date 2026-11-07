@@ -93,9 +93,8 @@ function ProductsPage() {
     const [selectedCategory, setSelectedCategory] = useState("all");
     const [selectedActiveStatus, setSelectedActiveStatus] = useState("all");
     const [selectedStatus, setSelectedStatus] = useState("all");
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
-    
-    const { products, setProducts, createProduct } = useStock();
+    const [isDialogOpen, setIsDialogOpen] = useState(false);    
+    const { products, setProducts, createProduct, categories } = useStock();
     
     const indicators = [
       {
@@ -417,17 +416,15 @@ function ProductsPage() {
                       </SelectTrigger>
 
                       <SelectContent>
-                        <SelectItem value="cleaning">
-                          Produtos de limpeza
-                        </SelectItem>
+                        <SelectItem value="all">Todas as categorias</SelectItem>
 
-                        <SelectItem value="disposables">
-                          Descartáveis
-                        </SelectItem>
-
-                        <SelectItem value="durable">Duráveis</SelectItem>
-
-                        <SelectItem value="others">Outros</SelectItem>
+                        {categories
+                          .filter((category) => category.active)
+                          .map((category) => (
+                            <SelectItem key={category.id} value={category.name}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -579,12 +576,14 @@ function ProductsPage() {
 
             <SelectContent>
               <SelectItem value="all">Todas as categorias</SelectItem>
-              <SelectItem value="Produtos de limpeza">
-                Produtos de limpeza
-              </SelectItem>
-              <SelectItem value="Descartáveis">Descartáveis</SelectItem>
-              <SelectItem value="Duráveis">Duráveis</SelectItem>
-              <SelectItem value="Outros">Outros</SelectItem>
+
+              {categories
+                .filter((category) => category.active)
+                .map((category) => (
+                  <SelectItem key={category.id} value={category.name}>
+                    {category.name}
+                  </SelectItem>
+                ))}
             </SelectContent>
           </Select>
 

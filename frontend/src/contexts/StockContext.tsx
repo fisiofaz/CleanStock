@@ -45,6 +45,13 @@ export type Supplier = {
   active: boolean;
 };
 
+export type Category = {
+  id: number;
+  name: string;
+  description: string;
+  active: boolean;
+};
+
 const initialProducts: Product[] = [
   {
     id: 1,
@@ -104,11 +111,43 @@ const initialProducts: Product[] = [
 
 const initialSuppliers: Supplier[] = [];
 
+const initialCategories: Category[] = [
+  {
+    id: 1,
+    name: "Produtos de limpeza",
+    description: "Produtos utilizados na limpeza e higienização.",
+    active: true,
+  },
+  {
+    id: 2,
+    name: "Descartáveis",
+    description: "Materiais descartáveis utilizados na instituição.",
+    active: true,
+  },
+  {
+    id: 3,
+    name: "Duráveis",
+    description: "Materiais e equipamentos reutilizáveis.",
+    active: true,
+  },
+  {
+    id: 4,
+    name: "Outros",
+    description: "Produtos que não se enquadram nas demais categorias.",
+    active: true,
+  },
+];
+
 type StockContextType = {
   products: Product[];
   setProducts: Dispatch<SetStateAction<Product[]>>;
   suppliers: Supplier[];
   setSuppliers: Dispatch<SetStateAction<Supplier[]>>;
+  categories: Category[];
+  setCategories: Dispatch<SetStateAction<Category[]>>;
+  createCategory: (category: Omit<Category, "id">) => void;
+  updateCategory: (id: number, categoryData: Omit<Category, "id">) => void;
+  toggleCategoryStatus: (id: number) => void;
   createSupplier: (supplier: Omit<Supplier, "id">) => void;
   updateSupplier: (id: number, data: Omit<Supplier, "id">) => void;
   toggleSupplierStatus: (id: number) => void;
@@ -129,7 +168,8 @@ const StockContext = createContext<StockContextType | undefined>(undefined);
 export function StockProvider({ children }: { children: ReactNode }) {
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [movements, setMovements] = useState<Movement[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>(initialSuppliers);  
+  const [suppliers, setSuppliers] = useState<Supplier[]>(initialSuppliers);
+  const [categories, setCategories] = useState<Category[]>(initialCategories);
 
   function createProduct(productData: Omit<Product, "id">) {
     const newProduct: Product = {
@@ -270,6 +310,33 @@ export function StockProvider({ children }: { children: ReactNode }) {
     );
   }
 
+  function createCategory(categoryData: Omit<Category, "id">) {
+    const newCategory: Category = {
+      ...categoryData,
+      id: Date.now(),
+    };
+
+    setCategories((currentCategories) => [...currentCategories, newCategory]);
+  }
+
+  function updateCategory(id: number, categoryData: Omit<Category, "id">) {
+    setCategories((currentCategories) =>
+      currentCategories.map((category) =>
+        category.id === id ? { ...category, ...categoryData } : category,
+      ),
+    );
+  }
+
+  function toggleCategoryStatus(id: number) {
+    setCategories((currentCategories) =>
+      currentCategories.map((category) =>
+        category.id === id
+          ? { ...category, active: !category.active }
+          : category,
+      ),
+    );
+  }
+
   return (
     <StockContext.Provider
       value={{
@@ -277,8 +344,13 @@ export function StockProvider({ children }: { children: ReactNode }) {
         setProducts,
         movements,
         setMovements,
-        suppliers,
+        suppliers,        
         setSuppliers,
+        categories,
+        setCategories,
+        createCategory,
+        updateCategory,
+        toggleCategoryStatus,
         registerMovement,
         createProduct,
         createSupplier,
