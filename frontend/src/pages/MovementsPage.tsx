@@ -29,7 +29,7 @@ import {
 
 const movementTypeLabels: Record<MovementType, string> = {
   ENTRY: "Entrada",
-  EXIT: "Saída",
+  EXIT: "Consumo",
   LOSS: "Perda",
   ADJUSTMENT: "Ajuste",
 };
@@ -49,6 +49,7 @@ function MovementsPage() {
   const [endDate, setEndDate] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState("");
+  const [lossReason, setLossReason] = useState("");
   const [movementType, setMovementType] = useState<MovementType>("ENTRY");
   const [quantity, setQuantity] = useState("");
   const [responsible, setResponsible] = useState("");
@@ -90,47 +91,56 @@ function MovementsPage() {
     ([id, name]) => ({ id, name }),
   );
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setFormError("");
+ function handleSubmit(event: FormEvent<HTMLFormElement>) {
+   event.preventDefault();
+   setFormError("");
 
-    const parsedQuantity = Number(quantity);
+   const parsedQuantity = Number(quantity);
 
-    if (!selectedProductId) {
-      setFormError("Selecione um produto.");
-      return;
-    }
+   if (!selectedProductId) {
+     setFormError("Selecione um produto.");
+     return;
+   }
 
-    if (
-      !Number.isFinite(parsedQuantity) ||
-      parsedQuantity < 0 ||
-      (movementType !== "ADJUSTMENT" && parsedQuantity === 0)
-    ) {
-      setFormError("Informe uma quantidade válida.");
-      return;
-    }
+   if (
+     !Number.isFinite(parsedQuantity) ||
+     parsedQuantity < 0 ||
+     (movementType !== "ADJUSTMENT" && parsedQuantity === 0)
+   ) {
+     setFormError("Informe uma quantidade válida.");
+     return;
+   }
 
-    const error = registerMovement({
-      productId: Number(selectedProductId),
-      type: movementType,
-      quantity: parsedQuantity,
-      responsible,
-      reason,
-    });
+   if (movementType === "LOSS" && !lossReason) {
+     setFormError("Selecione o motivo da perda.");
+     return;
+   }
 
-    if (error) {
-      setFormError(error);
-      return;
-    }
+   const movementReason =
+     movementType === "LOSS" ? `${lossReason} - ${reason.trim()}` : reason;
 
-    setSelectedProductId("");
-    setMovementType("ENTRY");
-    setQuantity("");
-    setResponsible("");
-    setReason("");
-    setFormError("");
-    setIsDialogOpen(false);
-  }
+   const error = registerMovement({
+     productId: Number(selectedProductId),
+     type: movementType,
+     quantity: parsedQuantity,
+     responsible,
+     reason: movementReason,
+   });
+
+   if (error) {
+     setFormError(error);
+     return;
+   }
+
+   setSelectedProductId("");
+   setMovementType("ENTRY");
+   setLossReason("");
+   setQuantity("");
+   setResponsible("");
+   setReason("");
+   setFormError("");
+   setIsDialogOpen(false);
+ }
 
   return (
     <div className="space-y-6">
@@ -203,11 +213,40 @@ function MovementsPage() {
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                 >
                   <option value="ENTRY">Entrada</option>
-                  <option value="EXIT">Saída</option>
+                  <option value="EXIT">Consumo</option>
                   <option value="LOSS">Perda</option>
                   <option value="ADJUSTMENT">Ajuste de estoque</option>
                 </select>
               </div>
+
+              {movementType === "LOSS" && (
+                <div className="space-y-2">
+                  <label htmlFor="lossReason" className="text-sm font-medium">
+                    Motivo da perda
+                  </label>
+
+                  <select
+                    id="lossReason"
+                    value={lossReason}
+                    onChange={(event) => setLossReason(event.target.value)}
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    required
+                  >
+                    <option value="">Selecione o motivo</option>
+                    <option value="Produto vencido">Produto vencido</option>
+                    <option value="Produto danificado">
+                      Produto danificado
+                    </option>
+                    <option value="Produto deteriorado">
+                      Produto deteriorado
+                    </option>
+                    <option value="Produto contaminado">
+                      Produto contaminado
+                    </option>
+                    <option value="Outro motivo">Outro motivo</option>
+                  </select>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <label
@@ -286,6 +325,7 @@ function MovementsPage() {
                     setIsDialogOpen(false);
                     setSelectedProductId("");
                     setMovementType("ENTRY");
+                    setLossReason("");
                     setQuantity("");
                     setResponsible("");
                     setReason("");
@@ -335,7 +375,7 @@ function MovementsPage() {
         {/* Saídas */}
         <div className="rounded-xl border bg-card p-5">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">Saídas</p>
+            <p className="text-sm text-muted-foreground">Consumo</p>
             <ArrowUpCircle className="size-5 text-blue-600" />
           </div>
 
@@ -387,7 +427,7 @@ function MovementsPage() {
               >
                 <option value="ALL">Todas</option>
                 <option value="ENTRY">Entradas</option>
-                <option value="EXIT">Saídas</option>
+                <option value="EXIT">Consumo</option>
                 <option value="LOSS">Perdas</option>
                 <option value="ADJUSTMENT">Ajustes</option>
               </select>
