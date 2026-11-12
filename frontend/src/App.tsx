@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from "react-router";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import AppLayout from "@/components/layout/AppLayout";
 import { StockProvider } from "@/contexts/StockContext";
+import LoginPage from "@/pages/LoginPage";
 import DashboardPage from "@/pages/DashboardPage";
 import ProductsPage from "@/pages/ProductsPage";
 import CategoriesPage from "@/pages/CategoriesPage";
@@ -20,6 +21,7 @@ function App() {
       <StockProvider>
         <BrowserRouter>
           <Routes>
+            <Route path="/login" element={<LoginPage />} />
             <Route element={<AppLayout />}>
               <Route path="/" element={<DashboardPage />} />
               <Route path="/products" element={<ProductsPage />} />
