@@ -1,0 +1,22 @@
+
+services:
+  cleanstock-db:
+    image: postgres:16-alpine
+    container_name: cleanstock-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cleanstock
+      POSTGRES_USER: cleanstock_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5545:5432"
+    volumes:
+      - cleanstock_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cleanstock_user -d cleanstock"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  cleanstock_data:
