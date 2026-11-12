@@ -70,6 +70,17 @@ export type Purchase = {
   status: "CONFIRMED";
 };
 
+export type UserRole = "ADMIN" | "OPERATOR";
+
+export type User = {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  role: UserRole;
+  active: boolean;
+};
+
 const initialProducts: Product[] = [
   {
     id: 1,
@@ -183,6 +194,11 @@ type StockContextType = {
   createProduct: (product: Omit<Product, "id">) => void;
   purchases: Purchase[];
   setPurchases: Dispatch<SetStateAction<Purchase[]>>;
+  users: User[];
+  setUsers: Dispatch<SetStateAction<User[]>>;
+  createUser: (user: Omit<User, "id">) => void;
+  updateUser: (id: number, userData: Omit<User, "id">) => void;
+  toggleUserStatus: (id: number) => void;
 };
 
 const StockContext = createContext<StockContextType | undefined>(undefined);
@@ -193,6 +209,7 @@ export function StockProvider({ children }: { children: ReactNode }) {
   const [suppliers, setSuppliers] = useState<Supplier[]>(initialSuppliers);
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
 
   function createProduct(productData: Omit<Product, "id">) {
     const newProduct: Product = {
@@ -360,6 +377,32 @@ export function StockProvider({ children }: { children: ReactNode }) {
     );
   }
 
+  function createUser(userData: Omit<User, "id">) {
+    setUsers((currentUsers) => [
+      ...currentUsers,
+      {
+        id: Date.now(),
+        ...userData,
+      },
+    ]);
+  }
+
+  function updateUser(id: number, userData: Omit<User, "id">) {
+    setUsers((currentUsers) =>
+      currentUsers.map((user) =>
+        user.id === id ? { ...user, ...userData } : user,
+      ),
+    );
+  }
+
+  function toggleUserStatus(id: number) {
+    setUsers((currentUsers) =>
+      currentUsers.map((user) =>
+        user.id === id ? { ...user, active: !user.active } : user,
+      ),
+    );
+  }
+
   return (
     <StockContext.Provider
       value={{
@@ -369,6 +412,11 @@ export function StockProvider({ children }: { children: ReactNode }) {
         setMovements,
         suppliers,
         setSuppliers,
+        users,
+        setUsers,
+        createUser,
+        updateUser,
+        toggleUserStatus,
         categories,
         setCategories,
         createCategory,

@@ -90,7 +90,6 @@ function AppSidebar() {
 
         <SidebarContent>
           <SidebarGroup>
-            ProductsPage.tsx
             <SidebarGroupLabel>MENU PRINCIPAL</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>

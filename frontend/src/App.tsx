@@ -10,6 +10,8 @@ import MovementsPage from "@/pages/MovementsPage";
 import SuppliersPage from "@/pages/SuppliersPage";
 import PurchasesPage from "@/pages/PurchasesPage";
 import ReportsPage from "@/pages/ReportsPage";
+import UsersPage from "@/pages/UsersPage";
+
 
 
 function App() {
@@ -26,6 +28,7 @@ function App() {
               <Route path="/purchases" element={<PurchasesPage />} />
               <Route path="/movements" element={<MovementsPage />} />
               <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/users" element={<UsersPage />} />
             </Route>
           </Routes>
         </BrowserRouter>
