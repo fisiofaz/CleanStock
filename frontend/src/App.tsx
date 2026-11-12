@@ -9,6 +9,8 @@ import CategoriesPage from "@/pages/CategoriesPage";
 import MovementsPage from "@/pages/MovementsPage";
 import SuppliersPage from "@/pages/SuppliersPage";
 import PurchasesPage from "@/pages/PurchasesPage";
+import ReportsPage from "@/pages/ReportsPage";
+
 
 function App() {
   return (
@@ -23,6 +25,7 @@ function App() {
               <Route path="/suppliers" element={<SuppliersPage />} />
               <Route path="/purchases" element={<PurchasesPage />} />
               <Route path="/movements" element={<MovementsPage />} />
+              <Route path="/reports" element={<ReportsPage />} />
             </Route>
           </Routes>
         </BrowserRouter>

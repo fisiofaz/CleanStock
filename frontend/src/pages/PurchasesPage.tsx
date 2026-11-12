@@ -8,7 +8,11 @@ import {
   Trash2,
 } from "lucide-react";
 
-import { useStock } from "@/contexts/StockContext";
+import {
+  useStock,
+  type Purchase,
+  type PurchaseItem,
+} from "@/contexts/StockContext";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -20,27 +24,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
-type PurchaseItem = {
-  productId: number;
-  productName: string;
-  unit: string;
-  quantity: number;
-  unitPrice: number;
-};
-
-type Purchase = {
-  id: number;
-  supplierId: number;
-  supplierName: string;
-  date: string;
-  items: PurchaseItem[];
-  total: number;
-  status: "CONFIRMED";
-};
-
 export default function PurchasesPage() {
 
-    const { suppliers, products, registerMovement } = useStock();
+    const { suppliers, products, registerMovement, setPurchases, purchases } =
+      useStock();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [selectedSupplierId, setSelectedSupplierId] = useState("");
     const [purchaseDate, setPurchaseDate] = useState(
@@ -52,7 +39,6 @@ export default function PurchasesPage() {
     const [itemUnitPrice, setItemUnitPrice] = useState("");
     const [itemError, setItemError] = useState("");
     const [purchaseError, setPurchaseError] = useState("");
-    const [purchases, setPurchases] = useState<Purchase[]>([]);
     
     const totalPurchases = purchases.length;
 

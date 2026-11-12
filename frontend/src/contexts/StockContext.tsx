@@ -52,6 +52,24 @@ export type Category = {
   active: boolean;
 };
 
+export type PurchaseItem = {
+  productId: number;
+  productName: string;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+};
+
+export type Purchase = {
+  id: number;
+  supplierId: number;
+  supplierName: string;
+  date: string;
+  items: PurchaseItem[];
+  total: number;
+  status: "CONFIRMED";
+};
+
 const initialProducts: Product[] = [
   {
     id: 1,
@@ -138,6 +156,8 @@ const initialCategories: Category[] = [
   },
 ];
 
+
+
 type StockContextType = {
   products: Product[];
   setProducts: Dispatch<SetStateAction<Product[]>>;
@@ -161,6 +181,8 @@ type StockContextType = {
     reason: string;
   }) => string | null;
   createProduct: (product: Omit<Product, "id">) => void;
+  purchases: Purchase[];
+  setPurchases: Dispatch<SetStateAction<Purchase[]>>;
 };
 
 const StockContext = createContext<StockContextType | undefined>(undefined);
@@ -170,6 +192,7 @@ export function StockProvider({ children }: { children: ReactNode }) {
   const [movements, setMovements] = useState<Movement[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>(initialSuppliers);
   const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
 
   function createProduct(productData: Omit<Product, "id">) {
     const newProduct: Product = {
@@ -344,7 +367,7 @@ export function StockProvider({ children }: { children: ReactNode }) {
         setProducts,
         movements,
         setMovements,
-        suppliers,        
+        suppliers,
         setSuppliers,
         categories,
         setCategories,
@@ -356,6 +379,8 @@ export function StockProvider({ children }: { children: ReactNode }) {
         createSupplier,
         updateSupplier,
         toggleSupplierStatus,
+        purchases,
+        setPurchases,
       }}
     >
       {children}
