@@ -5,6 +5,7 @@ import { prisma } from "./lib/prisma.js";
 import categoriesRoutes from "./routes/categories.routes.js";
 import productsRoutes from "./routes/products.routes.js";
 import suppliersRoutes from "./routes/suppliers.routes.js";
+import purchasesRoutes from "./routes/purchases.routes.js";
 
 dotenv.config();
 
@@ -17,6 +18,7 @@ app.use(express.json());
 app.use("/api/categories", categoriesRoutes);
 app.use("/api/products", productsRoutes);
 app.use("/api/suppliers", suppliersRoutes);
+app.use("/api/purchases", purchasesRoutes);
 
 // Rota inicial
 app.get("/", (_req, res) => {
