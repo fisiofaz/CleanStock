@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import { prisma } from "./lib/prisma.js";
+import categoriesRoutes from "./routes/categories.routes.js";
 
 dotenv.config();
 
@@ -10,6 +12,7 @@ const PORT = process.env.PORT || 3000;
 // Middlewares
 app.use(cors());
 app.use(express.json());
+app.use("/api/categories", categoriesRoutes);
 
 // Rota inicial
 app.get("/", (_req, res) => {
@@ -20,6 +23,19 @@ app.get("/", (_req, res) => {
 });
 
 // Inicialização do servidor
-app.listen(PORT, () => {
-  console.log(`CleanStock API rodando na porta ${PORT}`);
-});
+async function startServer() {
+  try {
+    await prisma.$connect();
+
+    console.log("Conexão com PostgreSQL estabelecida!");
+
+    app.listen(PORT, () => {
+      console.log(`CleanStock API rodando na porta ${PORT}`);
+    });
+  } catch (error) {
+    console.error("Erro ao iniciar o servidor:", error);
+    process.exit(1);
+  }
+}
+
+startServer();
