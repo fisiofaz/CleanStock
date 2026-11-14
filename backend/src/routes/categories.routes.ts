@@ -165,4 +165,53 @@ router.put("/:id", async (req, res) => {
   }
 });
 
+// Ativar ou desativar uma categoria
+router.patch("/:id/status", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+
+    if (!Number.isInteger(id) || id <= 0) {
+      res.status(400).json({
+        message: "ID da categoria inválido.",
+      });
+      return;
+    }
+
+    const { active } = req.body;
+
+    if (typeof active !== "boolean") {
+      res.status(400).json({
+        message: "O status deve ser true ou false.",
+      });
+      return;
+    }
+
+    const existingCategory = await prisma.category.findUnique({
+      where: { id },
+    });
+
+    if (!existingCategory) {
+      res.status(404).json({
+        message: "Categoria não encontrada.",
+      });
+      return;
+    }
+
+    const category = await prisma.category.update({
+      where: { id },
+      data: {
+        active,
+      },
+    });
+
+    res.json(category);
+  } catch (error) {
+    console.error("Erro ao alterar status da categoria:", error);
+
+    res.status(500).json({
+      message: "Erro interno ao alterar status da categoria.",
+    });
+  }
+});
+
 export default router;
