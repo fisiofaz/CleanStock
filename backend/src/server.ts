@@ -7,6 +7,8 @@ import productsRoutes from "./routes/products.routes.js";
 import suppliersRoutes from "./routes/suppliers.routes.js";
 import purchasesRoutes from "./routes/purchases.routes.js";
 import movementsRoutes from "./routes/movements.routes.js";
+import usersRoutes from "./routes/users.routes.js";
+import authRoutes from "./routes/auth.routes.js";
 
 dotenv.config();
 
@@ -21,6 +23,8 @@ app.use("/api/products", productsRoutes);
 app.use("/api/suppliers", suppliersRoutes);
 app.use("/api/purchases", purchasesRoutes);
 app.use("/api/movements", movementsRoutes);
+app.use("/api/users", usersRoutes);
+app.use("/api/auth", authRoutes);
 
 // Rota inicial
 app.get("/", (_req, res) => {
