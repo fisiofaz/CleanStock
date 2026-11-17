@@ -8,6 +8,7 @@ import productsRoutes from "./routes/products.routes.js";
 import suppliersRoutes from "./routes/suppliers.routes.js";
 import purchasesRoutes from "./routes/purchases.routes.js";
 import movementsRoutes from "./routes/movements.routes.js";
+import reportsRoutes from "./routes/reports.routes.js";
 import usersRoutes from "./routes/users.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 
@@ -25,6 +26,7 @@ app.use("/api/products", productsRoutes);
 app.use("/api/suppliers", suppliersRoutes);
 app.use("/api/purchases", purchasesRoutes);
 app.use("/api/movements", movementsRoutes);
+app.use("/api/reports", reportsRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/auth", authRoutes);
 
