@@ -1,8 +1,11 @@
 import { BrowserRouter, Routes, Route } from "react-router";
 
+import ProtectedRoute from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import AppLayout from "@/components/layout/AppLayout";
+
 import { StockProvider } from "@/contexts/StockContext";
+
 import LoginPage from "@/pages/LoginPage";
 import DashboardPage from "@/pages/DashboardPage";
 import ProductsPage from "@/pages/ProductsPage";
@@ -22,15 +25,17 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
-            <Route element={<AppLayout />}>
-              <Route path="/" element={<DashboardPage />} />
-              <Route path="/products" element={<ProductsPage />} />
-              <Route path="/categories" element={<CategoriesPage />} />
-              <Route path="/suppliers" element={<SuppliersPage />} />
-              <Route path="/purchases" element={<PurchasesPage />} />
-              <Route path="/movements" element={<MovementsPage />} />
-              <Route path="/reports" element={<ReportsPage />} />
-              <Route path="/users" element={<UsersPage />} />
+            <Route element={<ProtectedRoute />}>
+              <Route element={<AppLayout />}>
+                <Route path="/" element={<DashboardPage />} />
+                <Route path="/products" element={<ProductsPage />} />
+                <Route path="/categories" element={<CategoriesPage />} />
+                <Route path="/suppliers" element={<SuppliersPage />} />
+                <Route path="/purchases" element={<PurchasesPage />} />
+                <Route path="/movements" element={<MovementsPage />} />
+                <Route path="/reports" element={<ReportsPage />} />
+                <Route path="/users" element={<UsersPage />} />
+              </Route>
             </Route>
           </Routes>
         </BrowserRouter>

@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
+import { useAuth } from "@/contexts/AuthContext";
 import { Boxes, Eye, EyeOff } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -9,6 +11,32 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  const navigate = useNavigate();
+  const { login } = useAuth();
+
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    setError("");
+    setLoading(true);
+
+    try {
+      await login(email, password);
+      navigate("/", { replace: true });
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível realizar o login.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-muted/50 to-primary/10 p-4">
@@ -35,7 +63,7 @@ export default function LoginPage() {
             Entre com seus dados para acessar o sistema.
           </p>
 
-          <form className="mt-8 space-y-5">
+          <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
             <div className="space-y-2">
               <Label htmlFor="email">E-mail</Label>
 
@@ -90,8 +118,14 @@ export default function LoginPage() {
               </button>
             </div>
 
-            <Button type="submit" className="w-full">
-              Entrar
+            {error && (
+              <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                {error}
+              </p>
+            )}
+
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Entrando..." : "Entrar"}
             </Button>
           </form>
         </div>
