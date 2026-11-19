@@ -30,6 +30,8 @@ export function CategoriesPage() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [editingCategoryId, setEditingCategoryId] = useState<number | null>(
     null,
   );
@@ -68,6 +70,7 @@ export function CategoriesPage() {
   function handleNewCategory() {
     resetForm();
     setIsDialogOpen(true);
+    setError(null);
   }
 
   function handleEditCategory(category: Category) {
@@ -78,11 +81,14 @@ export function CategoriesPage() {
       description: category.description,
     });
 
+    setError(null);
     setIsDialogOpen(true);
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    setError(null);
 
     const categoryData = {
       name: formData.name.trim(),
@@ -90,27 +96,44 @@ export function CategoriesPage() {
       active: true,
     };
 
-    if (!categoryData.name) {
+    if (!categoryData.name || !categoryData.description) {
+      setError("Preencha o nome e a descrição da categoria.");
       return;
     }
 
-    if (editingCategoryId !== null) {
-      const currentCategory = categories.find(
-        (category) => category.id === editingCategoryId,
-      );
+    setIsSaving(true);
 
-      if (currentCategory) {
-        updateCategory(editingCategoryId, {
+    try {
+      let result: string | null;
+
+      if (editingCategoryId !== null) {
+        const currentCategory = categories.find(
+          (category) => category.id === editingCategoryId,
+        );
+
+        if (!currentCategory) {
+          setError("Categoria não encontrada.");
+          return;
+        }
+
+        result = await updateCategory(editingCategoryId, {
           ...categoryData,
           active: currentCategory.active,
         });
+      } else {
+        result = await createCategory(categoryData);
       }
-    } else {
-      createCategory(categoryData);
-    }
 
-    setIsDialogOpen(false);
-    resetForm();
+      if (result) {
+        setError(result);
+        return;
+      }
+
+      setIsDialogOpen(false);
+      resetForm();
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   function handleDialogChange(open: boolean) {
@@ -118,6 +141,16 @@ export function CategoriesPage() {
 
     if (!open) {
       resetForm();
+    }
+  }
+
+  async function handleToggleCategoryStatus(id: number) {
+    setError(null);
+
+    const result = await toggleCategoryStatus(id);
+
+    if (result) {
+      setError(result);
     }
   }
 
@@ -140,17 +173,13 @@ export function CategoriesPage() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-lg border bg-card p-4">
-          <p className="text-sm text-muted-foreground">
-            Categorias ativas
-          </p>
+          <p className="text-sm text-muted-foreground">Categorias ativas</p>
 
           <p className="mt-2 text-2xl font-bold">{activeCategories}</p>
         </div>
 
         <div className="rounded-lg border bg-card p-4">
-          <p className="text-sm text-muted-foreground">
-            Categorias inativas
-          </p>
+          <p className="text-sm text-muted-foreground">Categorias inativas</p>
 
           <p className="mt-2 text-2xl font-bold">{inactiveCategories}</p>
         </div>
@@ -169,9 +198,7 @@ export function CategoriesPage() {
         </div>
 
         <div>
-          <h2 className="text-lg font-semibold">
-            Categorias cadastradas
-          </h2>
+          <h2 className="text-lg font-semibold">Categorias cadastradas</h2>
 
           <p className="text-sm text-muted-foreground">
             {categories.length} categoria(s) cadastrada(s)
@@ -182,9 +209,7 @@ export function CategoriesPage() {
           <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12 text-center">
             <Tags className="mb-3 size-10 text-muted-foreground" />
 
-            <h3 className="font-medium">
-              Nenhuma categoria cadastrada
-            </h3>
+            <h3 className="font-medium">Nenhuma categoria cadastrada</h3>
 
             <p className="mt-1 text-sm text-muted-foreground">
               Cadastre sua primeira categoria para organizar os produtos.
@@ -246,7 +271,7 @@ export function CategoriesPage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => toggleCategoryStatus(category.id)}
+                      onClick={() => handleToggleCategoryStatus(category.id)}
                     >
                       <Power className="mr-2 size-4" />
                       {category.active ? "Desativar" : "Ativar"}
@@ -258,6 +283,12 @@ export function CategoriesPage() {
           </div>
         )}
       </div>
+
+      {error && !isDialogOpen && (
+        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
       <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
         <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[600px]">
@@ -274,6 +305,11 @@ export function CategoriesPage() {
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4 py-4">
+            {error && (
+              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {error}
+              </div>
+            )}
             <div className="grid gap-2">
               <Label htmlFor="categoryName">Nome da categoria</Label>
 
@@ -316,7 +352,9 @@ export function CategoriesPage() {
                 Cancelar
               </Button>
 
-              <Button type="submit">Salvar categoria</Button>
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? "Salvando..." : "Salvar categoria"}
+              </Button>
             </div>
           </form>
         </DialogContent>

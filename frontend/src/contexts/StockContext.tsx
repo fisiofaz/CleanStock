@@ -1,11 +1,19 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useState,
   type Dispatch,
   type ReactNode,
   type SetStateAction,
 } from "react";
+
+import {
+  getCategories,
+  createCategory as createCategoryRequest,
+  updateCategory as updateCategoryRequest,
+  updateCategoryStatus,
+} from "@/services/categoryService";
 
 export type Product = {
   id: number;
@@ -140,35 +148,6 @@ const initialProducts: Product[] = [
 
 const initialSuppliers: Supplier[] = [];
 
-const initialCategories: Category[] = [
-  {
-    id: 1,
-    name: "Produtos de limpeza",
-    description: "Produtos utilizados na limpeza e higienização.",
-    active: true,
-  },
-  {
-    id: 2,
-    name: "Descartáveis",
-    description: "Materiais descartáveis utilizados na instituição.",
-    active: true,
-  },
-  {
-    id: 3,
-    name: "Duráveis",
-    description: "Materiais e equipamentos reutilizáveis.",
-    active: true,
-  },
-  {
-    id: 4,
-    name: "Outros",
-    description: "Produtos que não se enquadram nas demais categorias.",
-    active: true,
-  },
-];
-
-
-
 type StockContextType = {
   products: Product[];
   setProducts: Dispatch<SetStateAction<Product[]>>;
@@ -176,9 +155,16 @@ type StockContextType = {
   setSuppliers: Dispatch<SetStateAction<Supplier[]>>;
   categories: Category[];
   setCategories: Dispatch<SetStateAction<Category[]>>;
-  createCategory: (category: Omit<Category, "id">) => void;
-  updateCategory: (id: number, categoryData: Omit<Category, "id">) => void;
-  toggleCategoryStatus: (id: number) => void;
+
+  createCategory: (category: Omit<Category, "id">) => Promise<string | null>;
+
+  updateCategory: (
+    id: number,
+    categoryData: Omit<Category, "id">,
+  ) => Promise<string | null>;
+
+  toggleCategoryStatus: (id: number) => Promise<string | null>;
+  
   createSupplier: (supplier: Omit<Supplier, "id">) => void;
   updateSupplier: (id: number, data: Omit<Supplier, "id">) => void;
   toggleSupplierStatus: (id: number) => void;
@@ -207,9 +193,22 @@ export function StockProvider({ children }: { children: ReactNode }) {
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [movements, setMovements] = useState<Movement[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>(initialSuppliers);
-  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+
+  useEffect(() => {
+    async function loadCategories() {
+      try {
+        const data = await getCategories();
+        setCategories(data);
+      } catch (error) {
+        console.error("Erro ao carregar categorias:", error);
+      }
+    }
+
+    loadCategories();
+  }, []);
 
   function createProduct(productData: Omit<Product, "id">) {
     const newProduct: Product = {
@@ -350,31 +349,80 @@ export function StockProvider({ children }: { children: ReactNode }) {
     );
   }
 
-  function createCategory(categoryData: Omit<Category, "id">) {
-    const newCategory: Category = {
-      ...categoryData,
-      id: Date.now(),
-    };
+  async function createCategory(
+    categoryData: Omit<Category, "id">,
+  ): Promise<string | null> {
+    try {
+      const newCategory = await createCategoryRequest({
+        name: categoryData.name,
+        description: categoryData.description,
+      });
 
-    setCategories((currentCategories) => [...currentCategories, newCategory]);
+      setCategories((currentCategories) => [...currentCategories, newCategory]);
+
+      return null;
+    } catch (error) {
+      console.error("Erro ao cadastrar categoria:", error);
+
+      return error instanceof Error
+        ? error.message
+        : "Erro ao cadastrar categoria.";
+    }
   }
 
-  function updateCategory(id: number, categoryData: Omit<Category, "id">) {
-    setCategories((currentCategories) =>
-      currentCategories.map((category) =>
-        category.id === id ? { ...category, ...categoryData } : category,
-      ),
-    );
+  async function updateCategory(
+    id: number,
+    categoryData: Omit<Category, "id">,
+  ): Promise<string | null> {
+    try {
+      const updatedCategory = await updateCategoryRequest(id, {
+        name: categoryData.name,
+        description: categoryData.description,
+      });
+
+      setCategories((currentCategories) =>
+        currentCategories.map((category) =>
+          category.id === id ? updatedCategory : category,
+        ),
+      );
+
+      return null;
+    } catch (error) {
+      console.error("Erro ao atualizar categoria:", error);
+
+      return error instanceof Error
+        ? error.message
+        : "Erro ao atualizar categoria.";
+    }
   }
 
-  function toggleCategoryStatus(id: number) {
-    setCategories((currentCategories) =>
-      currentCategories.map((category) =>
-        category.id === id
-          ? { ...category, active: !category.active }
-          : category,
-      ),
-    );
+  async function toggleCategoryStatus(id: number): Promise<string | null> {
+    try {
+      const currentCategory = categories.find((category) => category.id === id);
+
+      if (!currentCategory) {
+        return "Categoria não encontrada.";
+      }
+
+      const updatedCategory = await updateCategoryStatus(
+        id,
+        !currentCategory.active,
+      );
+
+      setCategories((currentCategories) =>
+        currentCategories.map((category) =>
+          category.id === id ? updatedCategory : category,
+        ),
+      );
+
+      return null;
+    } catch (error) {
+      console.error("Erro ao alterar status da categoria:", error);
+
+      return error instanceof Error
+        ? error.message
+        : "Erro ao alterar status da categoria.";
+    }
   }
 
   function createUser(userData: Omit<User, "id">) {
