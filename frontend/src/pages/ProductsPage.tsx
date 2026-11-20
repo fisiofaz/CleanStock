@@ -70,13 +70,6 @@ function getStockStatus(product: Product) {
   };
 }
 
-const categoryLabels: Record<string, string> = {
-  cleaning: "Produtos de limpeza",
-  disposables: "Descartáveis",
-  durable: "Duráveis",
-  others: "Outros",
-};
-
 const unitLabels: Record<string, string> = {
   UN: "Unidade",
   L: "Litro",
@@ -94,7 +87,13 @@ function ProductsPage() {
     const [selectedActiveStatus, setSelectedActiveStatus] = useState("all");
     const [selectedStatus, setSelectedStatus] = useState("all");
     const [isDialogOpen, setIsDialogOpen] = useState(false);    
-    const { products, setProducts, createProduct, categories } = useStock();
+    const {
+      products,
+      createProduct,
+      categories,
+      updateProduct,
+      toggleProductStatus,
+    } = useStock();
     
     const indicators = [
       {
@@ -186,10 +185,12 @@ function ProductsPage() {
 
       setFormData({
         name: product.name,
-        category:
-          Object.entries(categoryLabels).find(
-            ([, label]) => label === product.category,
-          )?.[0] ?? product.category,
+        category: String(
+          product.categoryId ??
+            categories.find((category) => category.name === product.category)
+              ?.id ??
+            "",
+        ),
         unit:
           Object.entries(unitLabels).find(
             ([, label]) => label === product.unit,
@@ -203,7 +204,7 @@ function ProductsPage() {
       setIsDialogOpen(true);
     }
 
-    function handleCreateProduct() {
+    async function handleCreateProduct() {
       const isEditing = editingProductId !== null;
 
       if (
@@ -238,26 +239,48 @@ function ProductsPage() {
       }
 
       if (isEditing) {
-        setProducts((currentProducts) =>
-          currentProducts.map((product) =>
-            product.id === editingProductId
-              ? {
-                  ...product,
-                  name: formData.name.trim(),
-                  category:
-                    categoryLabels[formData.category] ?? formData.category,
-                  unit: unitLabels[formData.unit] ?? formData.unit,
-                  unitPrice,
-                  minimumStock,
-                  description: formData.description.trim(),
-                }
-              : product,
-          ),
+        const selectedCategory = categories.find(
+          (category) => category.id === Number(formData.category),
         );
-      } else {
-        createProduct({
+
+        const productToEdit = products.find(
+          (product) => product.id === editingProductId,
+        );
+
+        if (!selectedCategory || !productToEdit || editingProductId === null) {
+          alert("Não foi possível localizar o produto ou a categoria.");
+          return;
+        }
+
+        const error = await updateProduct(editingProductId, {
           name: formData.name.trim(),
-          category: categoryLabels[formData.category] ?? formData.category,
+          category: selectedCategory.name,
+          categoryId: selectedCategory.id,
+          unit: unitLabels[formData.unit] ?? formData.unit,
+          unitPrice,
+          minimumStock,
+          description: formData.description.trim(),
+          active: productToEdit.active,
+        });
+
+        if (error) {
+          alert(error);
+          return;
+        }
+      } else {
+        const selectedCategory = categories.find(
+          (category) => category.id === Number(formData.category),
+        );
+
+        if (!selectedCategory) {
+          alert("Selecione uma categoria válida.");
+          return;
+        }
+
+        const error = await createProduct({
+          name: formData.name.trim(),
+          category: selectedCategory.name,
+          categoryId: selectedCategory.id,
           quantity: initialStock,
           unit: unitLabels[formData.unit] ?? formData.unit,
           unitPrice,
@@ -265,6 +288,11 @@ function ProductsPage() {
           description: formData.description.trim(),
           active: true,
         });
+
+        if (error) {
+          alert(error);
+          return;
+        }
       }
 
       setFormData({
@@ -416,12 +444,13 @@ function ProductsPage() {
                       </SelectTrigger>
 
                       <SelectContent>
-                        <SelectItem value="all">Todas as categorias</SelectItem>
-
                         {categories
                           .filter((category) => category.active)
                           .map((category) => (
-                            <SelectItem key={category.id} value={category.name}>
+                            <SelectItem
+                              key={category.id}
+                              value={String(category.id)}
+                            >
                               {category.name}
                             </SelectItem>
                           ))}
@@ -580,7 +609,7 @@ function ProductsPage() {
               {categories
                 .filter((category) => category.active)
                 .map((category) => (
-                  <SelectItem key={category.id} value={category.name}>
+                  <SelectItem key={category.id} value={String(category.id)}>
                     {category.name}
                   </SelectItem>
                 ))}
@@ -682,15 +711,13 @@ function ProductsPage() {
                           type="button"
                           size="sm"
                           variant="outline"
-                          onClick={() =>
-                            setProducts((currentProducts) =>
-                              currentProducts.map((item) =>
-                                item.id === product.id
-                                  ? { ...item, active: !item.active }
-                                  : item,
-                              ),
-                            )
-                          }
+                          onClick={async () => {
+                            const error = await toggleProductStatus(product.id);
+
+                            if (error) {
+                              alert(error);
+                            }
+                          }}
                         >
                           {product.active ? "Desativar" : "Ativar"}
                         </Button>

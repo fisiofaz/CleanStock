@@ -15,10 +15,18 @@ import {
   updateCategoryStatus,
 } from "@/services/categoryService";
 
+import {
+  getProducts,
+  createProduct as createProductRequest,
+  updateProduct as updateProductRequest,
+  updateProductStatus as updateProductStatusRequest,
+} from "@/services/productService";
+
 export type Product = {
   id: number;
   name: string;
   category: string;
+  categoryId?: number;
   quantity: number;
   unit: string;
   unitPrice: number;
@@ -163,8 +171,10 @@ type StockContextType = {
     categoryData: Omit<Category, "id">,
   ) => Promise<string | null>;
 
+  toggleProductStatus: (id: number) => Promise<string | null>;
+
   toggleCategoryStatus: (id: number) => Promise<string | null>;
-  
+
   createSupplier: (supplier: Omit<Supplier, "id">) => void;
   updateSupplier: (id: number, data: Omit<Supplier, "id">) => void;
   toggleSupplierStatus: (id: number) => void;
@@ -177,7 +187,14 @@ type StockContextType = {
     responsible: string;
     reason: string;
   }) => string | null;
-  createProduct: (product: Omit<Product, "id">) => void;
+
+  createProduct: (product: Omit<Product, "id">) => Promise<string | null>;
+
+  updateProduct: (
+    id: number,
+    productData: Omit<Product, "id" | "quantity">,
+  ) => Promise<string | null>;
+
   purchases: Purchase[];
   setPurchases: Dispatch<SetStateAction<Purchase[]>>;
   users: User[];
@@ -210,32 +227,80 @@ export function StockProvider({ children }: { children: ReactNode }) {
     loadCategories();
   }, []);
 
-  function createProduct(productData: Omit<Product, "id">) {
-    const newProduct: Product = {
-      ...productData,
-      id: Date.now(),
-    };
+  useEffect(() => {
+    async function loadProducts() {
+      try {
+        const data = await getProducts();
+        setProducts(data);
+      } catch (error) {
+        console.error("Erro ao carregar produtos:", error);
+      }
+    }
 
-    setProducts((currentProducts) => [...currentProducts, newProduct]);
+    loadProducts();
+  }, []);
 
-    if (productData.quantity > 0) {
-      const initialMovement: Movement = {
-        id: Date.now() + 1,
-        productId: newProduct.id,
-        productName: newProduct.name,
-        type: "ENTRY",
+  async function createProduct(
+    productData: Omit<Product, "id">,
+  ): Promise<string | null> {
+    try {
+      if (!productData.categoryId) {
+        return "Selecione uma categoria válida.";
+      }
+
+      const newProduct = await createProductRequest({
+        name: productData.name,
+        categoryId: productData.categoryId,
         quantity: productData.quantity,
-        previousQuantity: 0,
-        newQuantity: productData.quantity,
-        date: new Date().toISOString(),
-        responsible: "Cadastro do sistema",
-        reason: "Estoque inicial no cadastro do produto",
-      };
+        unit: productData.unit,
+        unitPrice: productData.unitPrice,
+        minimumStock: productData.minimumStock,
+        description: productData.description,
+      });
 
-      setMovements((currentMovements) => [
-        initialMovement,
-        ...currentMovements,
-      ]);
+      setProducts((currentProducts) => [...currentProducts, newProduct]);
+
+      return null;
+    } catch (error) {
+      console.error("Erro ao cadastrar produto:", error);
+
+      return error instanceof Error
+        ? error.message
+        : "Erro ao cadastrar produto.";
+    }
+  }
+
+  async function updateProduct(
+    id: number,
+    productData: Omit<Product, "id" | "quantity">,
+  ): Promise<string | null> {
+    try {
+      if (!productData.categoryId) {
+        return "Selecione uma categoria válida.";
+      }
+
+      const updatedProduct = await updateProductRequest(id, {
+        name: productData.name,
+        categoryId: productData.categoryId,
+        unit: productData.unit,
+        unitPrice: productData.unitPrice,
+        minimumStock: productData.minimumStock,
+        description: productData.description,
+      });
+
+      setProducts((currentProducts) =>
+        currentProducts.map((product) =>
+          product.id === id ? updatedProduct : product,
+        ),
+      );
+
+      return null;
+    } catch (error) {
+      console.error("Erro ao atualizar produto:", error);
+
+      return error instanceof Error
+        ? error.message
+        : "Erro ao atualizar produto.";
     }
   }
 
@@ -320,6 +385,35 @@ export function StockProvider({ children }: { children: ReactNode }) {
     setMovements((currentMovements) => [movement, ...currentMovements]);
 
     return null;
+  }
+
+  async function toggleProductStatus(id: number): Promise<string | null> {
+    try {
+      const currentProduct = products.find((product) => product.id === id);
+
+      if (!currentProduct) {
+        return "Produto não encontrado.";
+      }
+
+      const updatedProduct = await updateProductStatusRequest(
+        id,
+        !currentProduct.active,
+      );
+
+      setProducts((currentProducts) =>
+        currentProducts.map((product) =>
+          product.id === id ? updatedProduct : product,
+        ),
+      );
+
+      return null;
+    } catch (error) {
+      console.error("Erro ao alterar status do produto:", error);
+
+      return error instanceof Error
+        ? error.message
+        : "Erro ao alterar status do produto.";
+    }
   }
 
   function createSupplier(supplierData: Omit<Supplier, "id">) {
@@ -472,6 +566,8 @@ export function StockProvider({ children }: { children: ReactNode }) {
         toggleCategoryStatus,
         registerMovement,
         createProduct,
+        updateProduct,
+        toggleProductStatus,
         createSupplier,
         updateSupplier,
         toggleSupplierStatus,
