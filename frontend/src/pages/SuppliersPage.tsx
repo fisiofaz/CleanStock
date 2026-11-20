@@ -53,33 +53,32 @@ function SuppliersPage() {
       );
     });
 
-    function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
       event.preventDefault();
 
-      if (!formData.name.trim()) {
-        alert("Informe o nome do fornecedor.");
+      if (
+        !formData.name.trim() ||
+        !formData.document.trim() ||
+        !formData.contactName.trim() ||
+        !formData.phone.trim() ||
+        !formData.email.trim() ||
+        !formData.address.trim()
+      ) {
+        alert("Preencha todos os campos do fornecedor.");
         return;
       }
 
-      if (!formData.document.trim()) {
-        alert("Informe o CPF ou CNPJ.");
-        return;
-      }
+      let error: string | null;
 
       if (editingSupplierId !== null) {
-        const currentSupplier = suppliers.find(
-          (supplier) => supplier.id === editingSupplierId,
-        );
-
-        updateSupplier(editingSupplierId, {
-          ...formData,
-          active: currentSupplier?.active ?? true,
-        });
+        error = await updateSupplier(editingSupplierId, formData);
       } else {
-        createSupplier({
-          ...formData,
-          active: true,
-        });
+        error = await createSupplier(formData);
+      }
+
+      if (error) {
+        alert(error);
+        return;
       }
 
       setFormData({
@@ -232,7 +231,13 @@ function SuppliersPage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => toggleSupplierStatus(supplier.id)}
+                      onClick={async () => {
+                        const error = await toggleSupplierStatus(supplier.id);
+
+                        if (error) {
+                          alert(error);
+                        }
+                      }}
                     >
                       <Power className="mr-2 size-4" />
                       {supplier.active ? "Desativar" : "Ativar"}

@@ -22,6 +22,13 @@ import {
   updateProductStatus as updateProductStatusRequest,
 } from "@/services/productService";
 
+import {
+  getSuppliers,
+  createSupplier as createSupplierRequest,
+  updateSupplier as updateSupplierRequest,
+  updateSupplierStatus as updateSupplierStatusRequest,
+} from "@/services/supplierService";
+
 export type Product = {
   id: number;
   name: string;
@@ -175,9 +182,17 @@ type StockContextType = {
 
   toggleCategoryStatus: (id: number) => Promise<string | null>;
 
-  createSupplier: (supplier: Omit<Supplier, "id">) => void;
-  updateSupplier: (id: number, data: Omit<Supplier, "id">) => void;
-  toggleSupplierStatus: (id: number) => void;
+  createSupplier: (
+    supplier: Omit<Supplier, "id" | "active">,
+  ) => Promise<string | null>;
+
+  updateSupplier: (
+    id: number,
+    data: Omit<Supplier, "id" | "active">,
+  ) => Promise<string | null>;
+
+  toggleSupplierStatus: (id: number) => Promise<string | null>;
+
   movements: Movement[];
   setMovements: Dispatch<SetStateAction<Movement[]>>;
   registerMovement: (data: {
@@ -238,6 +253,19 @@ export function StockProvider({ children }: { children: ReactNode }) {
     }
 
     loadProducts();
+  }, []);
+
+  useEffect(() => {
+    async function loadSuppliers() {
+      try {
+        const data = await getSuppliers();
+        setSuppliers(data);
+      } catch (error) {
+        console.error("Erro ao carregar fornecedores:", error);
+      }
+    }
+
+    loadSuppliers();
   }, []);
 
   async function createProduct(
@@ -416,31 +444,88 @@ export function StockProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function createSupplier(supplierData: Omit<Supplier, "id">) {
-    const newSupplier: Supplier = {
-      ...supplierData,
-      id: Date.now(),
-    };
+  async function createSupplier(
+    supplierData: Omit<Supplier, "id" | "active">,
+  ): Promise<string | null> {
+    try {
+      const newSupplier = await createSupplierRequest({
+        name: supplierData.name,
+        document: supplierData.document,
+        contactName: supplierData.contactName,
+        phone: supplierData.phone,
+        email: supplierData.email,
+        address: supplierData.address,
+      });
 
-    setSuppliers((currentSuppliers) => [...currentSuppliers, newSupplier]);
+      setSuppliers((currentSuppliers) => [...currentSuppliers, newSupplier]);
+
+      return null;
+    } catch (error) {
+      console.error("Erro ao cadastrar fornecedor:", error);
+
+      return error instanceof Error
+        ? error.message
+        : "Erro ao cadastrar fornecedor.";
+    }
   }
 
-  function updateSupplier(id: number, supplierData: Omit<Supplier, "id">) {
-    setSuppliers((currentSuppliers) =>
-      currentSuppliers.map((supplier) =>
-        supplier.id === id ? { ...supplier, ...supplierData } : supplier,
-      ),
-    );
+  async function updateSupplier(
+    id: number,
+    supplierData: Omit<Supplier, "id" | "active">,
+  ): Promise<string | null> {
+    try {
+      const updatedSupplier = await updateSupplierRequest(id, {
+        name: supplierData.name,
+        document: supplierData.document,
+        contactName: supplierData.contactName,
+        phone: supplierData.phone,
+        email: supplierData.email,
+        address: supplierData.address,
+      });
+
+      setSuppliers((currentSuppliers) =>
+        currentSuppliers.map((supplier) =>
+          supplier.id === id ? updatedSupplier : supplier,
+        ),
+      );
+
+      return null;
+    } catch (error) {
+      console.error("Erro ao atualizar fornecedor:", error);
+
+      return error instanceof Error
+        ? error.message
+        : "Erro ao atualizar fornecedor.";
+    }
   }
 
-  function toggleSupplierStatus(id: number) {
-    setSuppliers((currentSuppliers) =>
-      currentSuppliers.map((supplier) =>
-        supplier.id === id
-          ? { ...supplier, active: !supplier.active }
-          : supplier,
-      ),
-    );
+  async function toggleSupplierStatus(id: number): Promise<string | null> {
+    try {
+      const currentSupplier = suppliers.find((supplier) => supplier.id === id);
+
+      if (!currentSupplier) {
+        return "Fornecedor não encontrado.";
+      }
+
+      const updatedSupplier = await updateSupplierStatusRequest(
+        id,
+        !currentSupplier.active,
+      );
+
+      setSuppliers((currentSuppliers) =>
+        currentSuppliers.map((supplier) =>
+          supplier.id === id ? updatedSupplier : supplier,
+        ),
+      );
+
+      return null;
+    } catch (error) {
+      console.error("Erro ao alterar status do fornecedor:", error);
+
+      return error instanceof Error
+        ? error.message
+        : "Erro ao alterar status do fornecedor.";
+    }
   }
 
   async function createCategory(
