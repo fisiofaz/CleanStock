@@ -15,6 +15,13 @@ import {
   updateCategoryStatus,
 } from "@/services/categoryService";
 
+
+import {
+  getMovements,
+  createMovement as createMovementRequest,
+} from "@/services/movementService";
+
+
 import {
   getProducts,
   createProduct as createProductRequest,
@@ -199,14 +206,16 @@ type StockContextType = {
   toggleSupplierStatus: (id: number) => Promise<string | null>;
 
   movements: Movement[];
+
   setMovements: Dispatch<SetStateAction<Movement[]>>;
-  registerMovement: (data: {
+
+  createMovement: (data: {
     productId: number;
     type: MovementType;
     quantity: number;
     responsible: string;
     reason: string;
-  }) => string | null;
+  }) => Promise<string | null>;
 
   createProduct: (product: Omit<Product, "id">) => Promise<string | null>;
 
@@ -298,6 +307,21 @@ export function StockProvider({ children }: { children: ReactNode }) {
     loadPurchases();
   }, []);
 
+
+  useEffect(() => {
+    async function loadMovements() {
+      try {
+        const data = await getMovements();
+        setMovements(data);
+      } catch (error) {
+        console.error("Erro ao carregar movimentações:", error);
+      }
+    }
+
+    loadMovements();
+  }, []);
+
+
   async function createProduct(
     productData: Omit<Product, "id">,
   ): Promise<string | null> {
@@ -362,88 +386,35 @@ export function StockProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function registerMovement(data: {
+  
+  async function createMovement(data: {
     productId: number;
     type: MovementType;
     quantity: number;
     responsible: string;
     reason: string;
-  }): string | null {
-    const product = products.find((item) => item.id === data.productId);
+  }): Promise<string | null> {
+    try {
+      await createMovementRequest(data);
 
-    if (!product) {
-      return "Produto não encontrado.";
+      // Atualiza o histórico de movimentações.
+      const updatedMovements = await getMovements();
+      setMovements(updatedMovements);
+
+      // Atualiza os produtos para refletir a alteração do estoque.
+      const updatedProducts = await getProducts();
+      setProducts(updatedProducts);
+
+      return null;
+    } catch (error) {
+      console.error("Erro ao registrar movimentação:", error);
+
+      return error instanceof Error
+        ? error.message
+        : "Erro ao registrar movimentação.";
     }
-
-    if (!product.active) {
-      return "Não é possível movimentar um produto inativo.";
-    }
-
-    if (
-      !Number.isFinite(data.quantity) ||
-      data.quantity < 0 ||
-      (data.type !== "ADJUSTMENT" && data.quantity === 0)
-    ) {
-      return "Informe uma quantidade válida.";
-    }
-
-    if (!data.responsible.trim() || !data.reason.trim()) {
-      return "Informe o responsável e a justificativa.";
-    }
-
-    const previousQuantity = product.quantity;
-
-    let newQuantity: number;
-
-    switch (data.type) {
-      case "ENTRY":
-        newQuantity = previousQuantity + data.quantity;
-        break;
-
-      case "EXIT":
-      case "LOSS":
-        newQuantity = previousQuantity - data.quantity;
-        break;
-
-      case "ADJUSTMENT":
-        newQuantity = data.quantity;
-        break;
-    }
-
-    if (newQuantity < 0) {
-      return "Estoque insuficiente para realizar essa movimentação.";
-    }
-
-    if (newQuantity === previousQuantity) {
-      return "A quantidade informada não altera o estoque.";
-    }
-
-    const movement: Movement = {
-      id: Date.now(),
-      productId: product.id,
-      productName: product.name,
-      type: data.type,
-      quantity:
-        data.type === "ADJUSTMENT"
-          ? Math.abs(newQuantity - previousQuantity)
-          : data.quantity,
-      previousQuantity,
-      newQuantity,
-      date: new Date().toISOString(),
-      responsible: data.responsible.trim(),
-      reason: data.reason.trim(),
-    };
-
-    setProducts((currentProducts) =>
-      currentProducts.map((item) =>
-        item.id === product.id ? { ...item, quantity: newQuantity } : item,
-      ),
-    );
-
-    setMovements((currentMovements) => [movement, ...currentMovements]);
-
-    return null;
   }
+
 
   async function createPurchase(data: {
     supplierId: number;
@@ -711,7 +682,7 @@ export function StockProvider({ children }: { children: ReactNode }) {
         createCategory,
         updateCategory,
         toggleCategoryStatus,
-        registerMovement,
+        createMovement,
         createProduct,
         updateProduct,
         toggleProductStatus,

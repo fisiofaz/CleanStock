@@ -42,7 +42,7 @@ const movementTypeStyles: Record<MovementType, string> = {
 };
 
 function MovementsPage() {
-  const { products, movements, registerMovement } = useStock();
+  const { products, movements, createMovement } = useStock();
   const [typeFilter, setTypeFilter] = useState<MovementType | "ALL">("ALL");
   const [productFilter, setProductFilter] = useState("ALL");
   const [startDate, setStartDate] = useState("");
@@ -91,7 +91,7 @@ function MovementsPage() {
     ([id, name]) => ({ id, name }),
   );
 
- function handleSubmit(event: FormEvent<HTMLFormElement>) {
+ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
    event.preventDefault();
    setFormError("");
 
@@ -119,7 +119,7 @@ function MovementsPage() {
    const movementReason =
      movementType === "LOSS" ? `${lossReason} - ${reason.trim()}` : reason;
 
-   const error = registerMovement({
+   const error = await createMovement({
      productId: Number(selectedProductId),
      type: movementType,
      quantity: parsedQuantity,
