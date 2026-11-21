@@ -97,7 +97,7 @@ router.get("/:id", async (req, res) => {
 // Cadastrar e confirmar compra
 router.post("/", async (req, res) => {
   try {
-    const { supplierId, items } = req.body;
+   const { supplierId, date, items } = req.body;
 
     const parsedSupplierId = Number(supplierId);
 
@@ -116,6 +116,14 @@ router.post("/", async (req, res) => {
         message: "A compra deve possuir pelo menos um item.",
       });
       return;
+    }
+
+    const purchaseDate = date ? new Date(date) : new Date();
+
+    if (Number.isNaN(purchaseDate.getTime())) {
+      return res.status(400).json({
+        message: "Data da compra inválida.",
+      });
     }
 
     const supplier = await prisma.supplier.findUnique({
@@ -202,6 +210,7 @@ router.post("/", async (req, res) => {
       const newPurchase = await tx.purchase.create({
         data: {
           supplierId: parsedSupplierId,
+          date: purchaseDate,
           total,
           items: {
             create: items.map((item) => ({

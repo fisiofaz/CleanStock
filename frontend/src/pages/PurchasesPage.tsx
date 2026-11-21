@@ -10,7 +10,6 @@ import {
 
 import {
   useStock,
-  type Purchase,
   type PurchaseItem,
 } from "@/contexts/StockContext";
 
@@ -26,8 +25,7 @@ import { Button } from "@/components/ui/button";
 
 export default function PurchasesPage() {
 
-    const { suppliers, products, registerMovement, setPurchases, purchases } =
-      useStock();
+    const { suppliers, products, createPurchase, purchases } = useStock();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [selectedSupplierId, setSelectedSupplierId] = useState("");
     const [purchaseDate, setPurchaseDate] = useState(
@@ -106,77 +104,67 @@ export default function PurchasesPage() {
       0,
     );
 
-    function handleConfirmPurchase() {
-      const supplier = suppliers.find(
-        (item) => item.id === Number(selectedSupplierId),
+    
+async function handleConfirmPurchase() {
+  const supplier = suppliers.find(
+    (item) => item.id === Number(selectedSupplierId),
+  );
+
+  if (!supplier || !supplier.active) {
+    setPurchaseError("Selecione um fornecedor ativo.");
+    return;
+  }
+
+  if (!purchaseDate) {
+    setPurchaseError("Informe a data da compra.");
+    return;
+  }
+
+  if (purchaseDate > new Date().toISOString().slice(0, 10)) {
+    setPurchaseError("A data da compra não pode ser futura.");
+    return;
+  }
+
+  if (purchaseItems.length === 0) {
+    setPurchaseError("Adicione pelo menos um produto à compra.");
+    return;
+  }
+
+  for (const item of purchaseItems) {
+    const product = products.find(
+      (currentProduct) => currentProduct.id === item.productId,
+    );
+
+    if (!product || !product.active) {
+      setPurchaseError(
+        `O produto "${item.productName}" não está mais disponível.`,
       );
-
-      if (!supplier || !supplier.active) {
-        setPurchaseError("Selecione um fornecedor ativo.");
-        return;
-      }
-
-      if (!purchaseDate) {
-        setPurchaseError("Informe a data da compra.");
-        return;
-      }
-
-      if (purchaseDate > new Date().toISOString().slice(0, 10)) {
-        setPurchaseError("A data da compra não pode ser futura.");
-        return;
-      }
-
-      if (purchaseItems.length === 0) {
-        setPurchaseError("Adicione pelo menos um produto à compra.");
-        return;
-      }
-
-      for (const item of purchaseItems) {
-        const product = products.find(
-          (currentProduct) => currentProduct.id === item.productId,
-        );
-
-        if (!product || !product.active) {
-          setPurchaseError(
-            `O produto "${item.productName}" não está mais disponível.`,
-          );
-          return;
-        }
-      }
-
-      for (const item of purchaseItems) {
-        const error = registerMovement({
-          productId: item.productId,
-          type: "ENTRY",
-          quantity: item.quantity,
-          responsible: "Usuário do sistema",
-          reason: `Compra realizada com ${supplier.name}`,
-        });
-
-        if (error) {
-          setPurchaseError(error);
-          return;
-        }
-      }
-
-      const newPurchase: Purchase = {
-        id: Date.now(),
-        supplierId: supplier.id,
-        supplierName: supplier.name,
-        date: purchaseDate,
-        items: [...purchaseItems],
-        total: purchaseTotal,
-        status: "CONFIRMED",
-      };
-
-      setPurchases((currentPurchases) => [newPurchase, ...currentPurchases]);
-
-      setPurchaseItems([]);
-      setSelectedSupplierId("");
-      setPurchaseDate(new Date().toISOString().slice(0, 10));
-      setPurchaseError("");
-      setIsDialogOpen(false);
+      return;
     }
+  }
+
+  const error = await createPurchase({
+    supplierId: supplier.id,
+    date: purchaseDate,
+    items: purchaseItems.map((item) => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+    })),
+  });
+
+  if (error) {
+    setPurchaseError(error);
+    return;
+  }
+
+  setPurchaseItems([]);
+  setSelectedSupplierId("");
+  setPurchaseDate(new Date().toISOString().slice(0, 10));
+  setPurchaseError("");
+  setIsDialogOpen(false);
+}
+
 
   return (
     <div className="space-y-6">

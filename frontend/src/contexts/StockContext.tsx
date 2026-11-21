@@ -29,6 +29,11 @@ import {
   updateSupplierStatus as updateSupplierStatusRequest,
 } from "@/services/supplierService";
 
+import {
+  getPurchases,
+  createPurchase as createPurchaseRequest,
+} from "@/services/purchaseService";
+
 export type Product = {
   id: number;
   name: string;
@@ -211,7 +216,19 @@ type StockContextType = {
   ) => Promise<string | null>;
 
   purchases: Purchase[];
+
   setPurchases: Dispatch<SetStateAction<Purchase[]>>;
+
+  createPurchase: (data: {
+    supplierId: number;
+    date: string;
+    items: {
+      productId: number;
+      quantity: number;
+      unitPrice: number;
+    }[];
+  }) => Promise<string | null>;
+
   users: User[];
   setUsers: Dispatch<SetStateAction<User[]>>;
   createUser: (user: Omit<User, "id">) => void;
@@ -266,6 +283,19 @@ export function StockProvider({ children }: { children: ReactNode }) {
     }
 
     loadSuppliers();
+  }, []);
+
+  useEffect(() => {
+    async function loadPurchases() {
+      try {
+        const data = await getPurchases();
+        setPurchases(data);
+      } catch (error) {
+        console.error("Erro ao carregar compras:", error);
+      }
+    }
+
+    loadPurchases();
   }, []);
 
   async function createProduct(
@@ -413,6 +443,38 @@ export function StockProvider({ children }: { children: ReactNode }) {
     setMovements((currentMovements) => [movement, ...currentMovements]);
 
     return null;
+  }
+
+  async function createPurchase(data: {
+    supplierId: number;
+    date: string;
+    items: {
+      productId: number;
+      quantity: number;
+      unitPrice: number;
+    }[];
+  }): Promise<string | null> {
+    try {
+      const newPurchase = await createPurchaseRequest(data);
+
+      setPurchases((currentPurchases) => [newPurchase, ...currentPurchases]);
+
+      // Atualiza os produtos para refletir as entradas da compra.
+      try {
+        const updatedProducts = await getProducts();
+        setProducts(updatedProducts);
+      } catch (refreshError) {
+        console.error("Erro ao atualizar produtos:", refreshError);
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Erro ao cadastrar compra:", error);
+
+      return error instanceof Error
+        ? error.message
+        : "Erro ao cadastrar compra.";
+    }
   }
 
   async function toggleProductStatus(id: number): Promise<string | null> {
@@ -656,6 +718,7 @@ export function StockProvider({ children }: { children: ReactNode }) {
         createSupplier,
         updateSupplier,
         toggleSupplierStatus,
+        createPurchase,
         purchases,
         setPurchases,
       }}
