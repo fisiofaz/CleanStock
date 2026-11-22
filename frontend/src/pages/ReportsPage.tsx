@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { AlertTriangle, DollarSign, Package, ShoppingCart } from "lucide-react";
 
@@ -16,85 +16,74 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { getReports, type ReportData } from "@/services/reportService";
+
 export default function ReportsPage() {
-  const { products, purchases, movements } = useStock();
+  const [reportData, setReportData] = useState<ReportData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const { products } = useStock();
+
   // Filtros do histórico
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [selectedProduct, setSelectedProduct] = useState("all");
 
-  // Produtos ativos
-  const activeProducts = products.filter((product) => product.active);
+  useEffect(() => {
+    async function loadReports() {
+      try {
+        setLoading(true);
+        setError("");
 
-  // Valor total do estoque
-  const stockValue = activeProducts.reduce(
-    (total, product) => total + product.quantity * product.unitPrice,
-    0,
-  );
+        const data = await getReports({
+          productId:
+            selectedProduct === "all" ? undefined : Number(selectedProduct),
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
+        });
 
-  // Produtos com estoque baixo
-  const lowStockProducts = activeProducts.filter(
-    (product) => product.quantity <= product.minimumStock,
-  );
+        setReportData(data);
+      } catch (error) {
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Erro ao carregar os relatórios.",
+        );
+      } finally {
+        setLoading(false);
+      }
+    }
 
-  // Indicadores de compras
-  const totalPurchases = purchases.length;
+    loadReports();
+  }, [selectedProduct, startDate, endDate]);
 
-  const totalPurchaseValue = purchases.reduce(
-    (total, purchase) => total + purchase.total,
-    0,
-  );
+  // Indicadores recebidos do backend
+  const activeProducts = reportData?.activeProducts ?? 0;
+
+  const stockValue = reportData?.inventoryValue ?? 0;
+
+  const lowStockProducts = reportData?.lowStockProducts ?? 0;
+
+  const totalPurchases = reportData?.totalPurchases ?? 0;
+
+  const totalPurchaseValue = reportData?.totalPurchaseValue ?? 0;
 
   // Indicadores de movimentações
-  const totalEntries = movements.filter(
-    (movement) => movement.type === "ENTRY",
-  ).length;
+  const totalEntries = reportData?.totalEntries ?? 0;
 
-  const totalConsumptions = movements.filter(
-    (movement) => movement.type === "EXIT",
-  ).length;
+  const totalConsumptions = reportData?.totalConsumptions ?? 0;
 
-  const totalLosses = movements.filter(
-    (movement) => movement.type === "LOSS",
-  ).length;
+  const totalLosses = reportData?.totalLosses ?? 0;
 
-  const totalAdjustments = movements.filter(
-    (movement) => movement.type === "ADJUSTMENT",
-  ).length;
-
-  // Movimentações filtradas por produto e período
-  const filteredMovements = movements.filter((movement) => {
-    const movementDate = new Date(movement.date);
-
-    const year = movementDate.getFullYear();
-    const month = String(movementDate.getMonth() + 1).padStart(2, "0");
-    const day = String(movementDate.getDate()).padStart(2, "0");
-
-    const dateKey = `${year}-${month}-${day}`;
-
-    const matchesProduct =
-      selectedProduct === "all" ||
-      movement.productId.toString() === selectedProduct;
-
-    const matchesStartDate = !startDate || dateKey >= startDate;
-
-    const matchesEndDate = !endDate || dateKey <= endDate;
-
-    return matchesProduct && matchesStartDate && matchesEndDate;
-  });
+  const totalAdjustments = reportData?.totalAdjustments ?? 0;
 
   // Quantidades movimentadas no período selecionado
-  const productEntries = filteredMovements
-    .filter((movement) => movement.type === "ENTRY")
-    .reduce((total, movement) => total + movement.quantity, 0);
+  const productEntries = reportData?.productEntries ?? 0;
 
-  const productConsumptions = filteredMovements
-    .filter((movement) => movement.type === "EXIT")
-    .reduce((total, movement) => total + movement.quantity, 0);
+  const productConsumptions = reportData?.productConsumptions ?? 0;
 
-  const productLosses = filteredMovements
-    .filter((movement) => movement.type === "LOSS")
-    .reduce((total, movement) => total + movement.quantity, 0);
+  const productLosses = reportData?.productLosses ?? 0;
 
   // Produto selecionado para análise
   const selectedProductData =
@@ -107,42 +96,7 @@ export default function ReportsPage() {
   const selectedUnit = selectedProductData?.unit ?? "unidades";
 
   // Movimentações dos últimos seis meses
-  const monthlyMovements = Array.from({ length: 6 }, (_, index) => {
-    const date = new Date();
-
-    date.setDate(1);
-    date.setHours(0, 0, 0, 0);
-    date.setMonth(date.getMonth() - (5 - index));
-
-    const year = date.getFullYear();
-    const month = date.getMonth();
-
-    const monthMovements = filteredMovements.filter((movement) => {
-      const movementDate = new Date(movement.date);
-
-      return (
-        movementDate.getFullYear() === year && movementDate.getMonth() === month
-      );
-    });
-
-    return {
-      month: new Intl.DateTimeFormat("pt-BR", {
-        month: "short",
-      }).format(date),
-
-      entries: monthMovements
-        .filter((movement) => movement.type === "ENTRY")
-        .reduce((total, movement) => total + movement.quantity, 0),
-
-      consumptions: monthMovements
-        .filter((movement) => movement.type === "EXIT")
-        .reduce((total, movement) => total + movement.quantity, 0),
-
-      losses: monthMovements
-        .filter((movement) => movement.type === "LOSS")
-        .reduce((total, movement) => total + movement.quantity, 0),
-    };
-  });
+  const monthlyMovements = reportData?.monthlyMovements ?? [];
 
   // Maior quantidade mensal, usada como referência para as barras
   const maxMonthlyMovements = Math.max(
@@ -170,6 +124,11 @@ export default function ReportsPage() {
           Acompanhe os indicadores e o desempenho do estoque.
         </p>
       </div>
+      {error && (
+        <p className="text-sm text-destructive">
+          Erro ao carregar os relatórios: {error}
+        </p>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card>
@@ -181,7 +140,9 @@ export default function ReportsPage() {
           </CardHeader>
 
           <CardContent>
-            <div className="text-2xl font-bold">{activeProducts.length}</div>
+            <div className="text-2xl font-bold">
+              {loading ? "..." : error ? "Erro" : activeProducts}
+            </div>
             <p className="text-xs text-muted-foreground">
               Produtos cadastrados e ativos
             </p>
@@ -198,7 +159,7 @@ export default function ReportsPage() {
 
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatCurrency(stockValue)}
+              {loading ? "..." : error ? "Erro" : formatCurrency(stockValue)}
             </div>
             <p className="text-xs text-muted-foreground">
               Valor dos produtos disponíveis
@@ -213,7 +174,9 @@ export default function ReportsPage() {
           </CardHeader>
 
           <CardContent>
-            <div className="text-2xl font-bold">{lowStockProducts.length}</div>
+            <div className="text-2xl font-bold">
+              {loading ? "..." : error ? "Erro" : lowStockProducts}
+            </div>
             <p className="text-xs text-muted-foreground">
               Produtos no limite ou abaixo do mínimo
             </p>
@@ -229,9 +192,15 @@ export default function ReportsPage() {
           </CardHeader>
 
           <CardContent>
-            <div className="text-2xl font-bold">{totalPurchases}</div>
-            <p className="text-xs text-muted-foreground">
-              {formatCurrency(totalPurchaseValue)} em compras
+            <div className="text-2xl font-bold">
+              {loading ? "..." : error ? "Erro" : totalPurchases}
+            </div>
+            <p>
+              {loading
+                ? "Carregando..."
+                : error
+                  ? "Erro ao carregar"
+                  : `${formatCurrency(totalPurchaseValue)} em compras`}
             </p>
           </CardContent>
         </Card>
@@ -247,7 +216,9 @@ export default function ReportsPage() {
               <Package className="size-5 text-emerald-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalEntries}</div>
+              <div className="text-2xl font-bold">
+                {loading ? "..." : error ? "Erro" : totalEntries}
+              </div>
               <p className="text-xs text-muted-foreground">
                 Operações de entrada
               </p>
@@ -260,7 +231,9 @@ export default function ReportsPage() {
               <ShoppingCart className="size-5 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalConsumptions}</div>
+              <div className="text-2xl font-bold">
+                {loading ? "..." : error ? "Erro" : totalConsumptions}
+              </div>
               <p className="text-xs text-muted-foreground">
                 Operações de consumo
               </p>
@@ -273,7 +246,9 @@ export default function ReportsPage() {
               <AlertTriangle className="size-5 text-amber-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalLosses}</div>
+              <div className="text-2xl font-bold">
+                {loading ? "..." : error ? "Erro" : totalLosses}
+              </div>
               <p className="text-xs text-muted-foreground">
                 Operações de perda
               </p>
@@ -286,7 +261,9 @@ export default function ReportsPage() {
               <DollarSign className="size-5 text-violet-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalAdjustments}</div>
+              <div className="text-2xl font-bold">
+                {loading ? "..." : error ? "Erro" : totalAdjustments}
+              </div>
               <p className="text-xs text-muted-foreground">
                 Operações de ajuste
               </p>
@@ -361,7 +338,11 @@ export default function ReportsPage() {
 
           <CardContent>
             <div className="text-2xl font-bold text-emerald-600">
-              {productEntries} {selectedUnit}
+              {loading
+                ? "..."
+                : error
+                  ? "Erro"
+                  : `${productEntries} ${selectedUnit}`}
             </div>
             <p className="text-xs text-muted-foreground">
               Quantidade recebida no período
@@ -378,7 +359,11 @@ export default function ReportsPage() {
 
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {productConsumptions} {selectedUnit}
+              {loading
+                ? "..."
+                : error
+                  ? "Erro"
+                  : `${productConsumptions} ${selectedUnit}`}
             </div>
             <p className="text-xs text-muted-foreground">
               Quantidade consumida no período
@@ -395,7 +380,11 @@ export default function ReportsPage() {
 
           <CardContent>
             <div className="text-2xl font-bold text-amber-600">
-              {productLosses} {selectedUnit}
+              {loading
+                ? "..."
+                : error
+                  ? "Erro"
+                  : `${productLosses} ${selectedUnit}`}
             </div>
             <p className="text-xs text-muted-foreground">
               Quantidade perdida no período
@@ -437,47 +426,61 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-6 gap-3">
-            {monthlyMovements.map((item, index) => (
-              <div
-                key={`${item.month}-${index}`}
-                className="flex min-w-0 flex-col items-center gap-3"
-              >
-                <div className="flex h-48 w-full items-end justify-center gap-1 border-b">
-                  <div
-                    className="w-full max-w-5 rounded-t-sm bg-emerald-500 transition-all"
-                    style={{
-                      height: `${(item.entries / maxMonthlyMovements) * 100}%`,
-                      minHeight: item.entries > 0 ? "4px" : "0px",
-                    }}
-                    title={`Entradas: ${item.entries}`}
-                  />
+          {loading ? (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              Carregando movimentações...
+            </p>
+          ) : error ? (
+            <p className="py-10 text-center text-sm text-destructive">
+              Não foi possível carregar o gráfico.
+            </p>
+          ) : monthlyMovements.length === 0 ? (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              Nenhuma movimentação encontrada para os filtros selecionados.
+            </p>
+          ) : (
+            <div className="grid grid-cols-6 gap-3">
+              {monthlyMovements.map((item, index) => (
+                <div
+                  key={`${item.month}-${index}`}
+                  className="flex min-w-0 flex-col items-center gap-3"
+                >
+                  <div className="flex h-48 w-full items-end justify-center gap-1 border-b">
+                    <div
+                      className="w-full max-w-5 rounded-t-sm bg-emerald-500 transition-all"
+                      style={{
+                        height: `${(item.entries / maxMonthlyMovements) * 100}%`,
+                        minHeight: item.entries > 0 ? "4px" : "0px",
+                      }}
+                      title={`Entradas: ${item.entries}`}
+                    />
 
-                  <div
-                    className="w-full max-w-5 rounded-t-sm bg-blue-500 transition-all"
-                    style={{
-                      height: `${(item.consumptions / maxMonthlyMovements) * 100}%`,
-                      minHeight: item.consumptions > 0 ? "4px" : "0px",
-                    }}
-                    title={`Consumos: ${item.consumptions}`}
-                  />
+                    <div
+                      className="w-full max-w-5 rounded-t-sm bg-blue-500 transition-all"
+                      style={{
+                        height: `${(item.consumptions / maxMonthlyMovements) * 100}%`,
+                        minHeight: item.consumptions > 0 ? "4px" : "0px",
+                      }}
+                      title={`Consumos: ${item.consumptions}`}
+                    />
 
-                  <div
-                    className="w-full max-w-5 rounded-t-sm bg-amber-500 transition-all"
-                    style={{
-                      height: `${(item.losses / maxMonthlyMovements) * 100}%`,
-                      minHeight: item.losses > 0 ? "4px" : "0px",
-                    }}
-                    title={`Perdas: ${item.losses}`}
-                  />
+                    <div
+                      className="w-full max-w-5 rounded-t-sm bg-amber-500 transition-all"
+                      style={{
+                        height: `${(item.losses / maxMonthlyMovements) * 100}%`,
+                        minHeight: item.losses > 0 ? "4px" : "0px",
+                      }}
+                      title={`Perdas: ${item.losses}`}
+                    />
+                  </div>
+
+                  <span className="text-xs capitalize text-muted-foreground">
+                    {item.month}
+                  </span>
                 </div>
-
-                <span className="text-xs capitalize text-muted-foreground">
-                  {item.month}
-                </span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
