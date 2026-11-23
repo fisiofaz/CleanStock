@@ -23,6 +23,7 @@ export default function UsersPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState<"ADMIN" | "OPERATOR">("OPERATOR");
+  const [password, setPassword] = useState("");
 
   const filteredUsers = users.filter((user) =>
     `${user.name} ${user.email}`
@@ -39,6 +40,7 @@ export default function UsersPage() {
     setPhone("");
     setRole("OPERATOR");
     setEditingUserId(null);
+    setPassword("");
   }
 
   function handleNewUser() {
@@ -59,7 +61,7 @@ export default function UsersPage() {
     setIsDialogOpen(true);
   }
 
-  function handleToggleUserStatus(userId: number) {
+  async function handleToggleUserStatus(userId: number) {
     const user = users.find((item) => item.id === userId);
 
     if (!user) return;
@@ -72,7 +74,11 @@ export default function UsersPage() {
 
     if (!confirmed) return;
 
-    toggleUserStatus(userId);
+    const error = await toggleUserStatus(userId);
+
+    if (error) {
+      alert(error);
+    }
   }
 
   function handleCloseDialog() {
@@ -80,7 +86,7 @@ export default function UsersPage() {
     resetForm();
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const normalizedEmail = email.trim().toLowerCase();
@@ -101,18 +107,27 @@ export default function UsersPage() {
       email: normalizedEmail,
       phone: phone.trim(),
       role,
-      active: true,
     };
+
+    let error: string | null;
 
     if (editingUserId !== null) {
       const currentUser = users.find((user) => user.id === editingUserId);
 
-      updateUser(editingUserId, {
+      error = await updateUser(editingUserId, {
         ...userData,
         active: currentUser?.active ?? true,
       });
     } else {
-      createUser(userData);
+      error = await createUser({
+        ...userData,
+        password,
+      });
+    }
+
+    if (error) {
+      alert(error);
+      return;
     }
 
     handleCloseDialog();
@@ -175,6 +190,21 @@ export default function UsersPage() {
                 placeholder="(00) 00000-0000"
               />
             </div>
+
+            {editingUserId === null && (
+              <div className="space-y-2">
+                <Label htmlFor="user-password">Senha</Label>
+                <Input
+                  id="user-password"
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Mínimo de 8 caracteres"
+                  minLength={8}
+                  required
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="user-role">Perfil de acesso</Label>

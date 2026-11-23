@@ -41,6 +41,13 @@ import {
   createPurchase as createPurchaseRequest,
 } from "@/services/purchaseService";
 
+import {
+  getUsers,
+  createUser as createUserRequest,
+  updateUser as updateUserRequest,
+  updateUserStatus as updateUserStatusRequest,
+} from "@/services/userService";
+
 export type Product = {
   id: number;
   name: string;
@@ -177,10 +184,15 @@ const initialSuppliers: Supplier[] = [];
 
 type StockContextType = {
   products: Product[];
+
   setProducts: Dispatch<SetStateAction<Product[]>>;
+
   suppliers: Supplier[];
+
   setSuppliers: Dispatch<SetStateAction<Supplier[]>>;
+
   categories: Category[];
+
   setCategories: Dispatch<SetStateAction<Category[]>>;
 
   createCategory: (category: Omit<Category, "id">) => Promise<string | null>;
@@ -239,10 +251,23 @@ type StockContextType = {
   }) => Promise<string | null>;
 
   users: User[];
+
   setUsers: Dispatch<SetStateAction<User[]>>;
-  createUser: (user: Omit<User, "id">) => void;
-  updateUser: (id: number, userData: Omit<User, "id">) => void;
-  toggleUserStatus: (id: number) => void;
+
+  createUser: (userData: {
+    name: string;
+    email: string;
+    phone: string;
+    password: string;
+    role: UserRole;
+  }) => Promise<string | null>;
+
+  updateUser: (
+    id: number,
+    userData: Omit<User, "id">,
+  ) => Promise<string | null>;
+
+  toggleUserStatus: (id: number) => Promise<string | null>;
 };
 
 const StockContext = createContext<StockContextType | undefined>(undefined);
@@ -321,6 +346,18 @@ export function StockProvider({ children }: { children: ReactNode }) {
     loadMovements();
   }, []);
 
+  useEffect(() => {
+    async function loadUsers() {
+      try {
+        const data = await getUsers();
+        setUsers(data);
+      } catch (error) {
+        console.error("Erro ao carregar usuários:", error);
+      }
+    }
+
+    loadUsers();
+  }, []);
 
   async function createProduct(
     productData: Omit<Product, "id">,
@@ -637,30 +674,73 @@ export function StockProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function createUser(userData: Omit<User, "id">) {
-    setUsers((currentUsers) => [
-      ...currentUsers,
-      {
-        id: Date.now(),
-        ...userData,
-      },
-    ]);
+  async function createUser(userData: {
+    name: string;
+    email: string;
+    phone: string;
+    password: string;
+    role: UserRole;
+  }): Promise<string | null> {
+    try {
+      const newUser = await createUserRequest(userData);
+
+      setUsers((currentUsers) => [...currentUsers, newUser]);
+
+      return null;
+    } catch (error) {
+      return error instanceof Error
+        ? error.message
+        : "Erro ao cadastrar usuário.";
+    }
   }
 
-  function updateUser(id: number, userData: Omit<User, "id">) {
-    setUsers((currentUsers) =>
-      currentUsers.map((user) =>
-        user.id === id ? { ...user, ...userData } : user,
-      ),
-    );
+  async function updateUser(
+    id: number,
+    userData: Omit<User, "id">,
+  ): Promise<string | null> {
+    try {
+      const updatedUser = await updateUserRequest(id, {
+        name: userData.name,
+        email: userData.email,
+        phone: userData.phone,
+        role: userData.role,
+      });
+
+      setUsers((currentUsers) =>
+        currentUsers.map((user) => (user.id === id ? updatedUser : user)),
+      );
+
+      return null;
+    } catch (error) {
+      return error instanceof Error
+        ? error.message
+        : "Erro ao atualizar usuário.";
+    }
   }
 
-  function toggleUserStatus(id: number) {
-    setUsers((currentUsers) =>
-      currentUsers.map((user) =>
-        user.id === id ? { ...user, active: !user.active } : user,
-      ),
-    );
+  async function toggleUserStatus(id: number): Promise<string | null> {
+    try {
+      const currentUser = users.find((user) => user.id === id);
+
+      if (!currentUser) {
+        return "Usuário não encontrado.";
+      }
+
+      const updatedUser = await updateUserStatusRequest(
+        id,
+        !currentUser.active,
+      );
+
+      setUsers((currentUsers) =>
+        currentUsers.map((user) => (user.id === id ? updatedUser : user)),
+      );
+
+      return null;
+    } catch (error) {
+      return error instanceof Error
+        ? error.message
+        : "Erro ao alterar o status do usuário.";
+    }
   }
 
   return (
