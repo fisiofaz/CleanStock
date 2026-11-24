@@ -15,7 +15,7 @@ import authRoutes from "./routes/auth.routes.js";
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // Middlewares
 app.use(cors());
@@ -45,7 +45,7 @@ async function startServer() {
 
     console.log("Conexão com PostgreSQL estabelecida!");
 
-    app.listen(PORT, () => {
+    app.listen(PORT, "0.0.0.0", () => {
       console.log(`CleanStock API rodando na porta ${PORT}`);
     });
   } catch (error) {
